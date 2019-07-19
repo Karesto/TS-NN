@@ -61,9 +61,11 @@ def transform(x):
 
 
 @jit
-def FSL(tab,csum,true_lb,lb,shape, prnt = False):
+def FSL(tab,csum,lb,true_lb,shape, prnt = False):
     '''
     FEW SHOT LEARNING -PEW PEW, You're learned-
+    lb : labels of train
+    true_lb : label of test
     '''
     loss = 0
     tot = np.zeros(shape)
@@ -122,50 +124,40 @@ def main(n,pas,xtr,xte,ytr,yte,rep = 1, show=True):
     ldtwt = np.zeros(n-1)
     print(xte.shape,xtr.shape,yte.shape,ytr.shape)
     with torch.no_grad():
-        hiddens_train = hidden(xtr[:, start:end, :],model)
-        hiddens_test  = hidden(xte[:, start:end, :],model)
+        hiddens_train = np.array(hidden(xtr[:, start:end, :],model))
+        hiddens_test  = np.array(hidden(xte[:, start:end, :],model))
 
 
         #On reprend la partie Normale:
-        for i in range(rep):
-            np.random.shuffle(hiddens_train)
+        for _ in range(rep):
+            hiddens_train, ytr = shuffle_in_unison(hiddens_train,ytr)
             tabc = np.exp(1 - tab_dist(hiddens_test,hiddens_train,sp.distance.cosine))
             csum = np.cumsum(tabc,axis=1)
-            tab = tab_dist(xte, xtr, sp.distance.euclidean)
-
+            tab = tab_dist(xte, xtr, distance)
             for j in range(1,n):
                 i = pas*j
                 #print(np.bincount(ytr[:i]))
-                l[j-1]    = FSL(tabc[:,:i],csum[:,i], yte, ytr, shape)
+                l[j-1]    = FSL(tabc[:,:i],csum[:,i], ytr, yte, shape)
                 ldtw[j-1] = testknn(tab[:,:i],ytr,i-1,5,y_test,shape)
-                # Partie ou on regarde les résultats a la fin
-            plt.figure()
-            plt.plot(range(n - 1), l, label = "Attention kernel method")
-            plt.plot(range(n - 1), ldtw - 0.05, label = "KNN with TW")
-            plt.legend(loc = 'best')
-            plt.xlabel("Number of data")
-            plt.ylabel("Percentage of wrong classifications")
-            plt.title("0-1 Loss in percentage for Classification")
-            plt.show()
+
             lt += l
             ldtwt += ldtw
 
         lt /= (rep)
         ldtwt /= (rep)
-        if show:
-            plt.figure()
-            plt.plot(range(n - 1), lt, label = "Attention kernel method")
-            plt.plot(range(n - 1), ldtwt, label = "KNN with TW")
-            plt.legend(loc = 'best')
-            plt.xlabel("Number of data")
-            plt.ylabel("Percentage of wrong classifications")
-            plt.title("0-1 Loss in percentage for Classification")
-            plt.show()
+        plt.figure()
+        plt.plotn(np.arange(pas,pas*n,pas), lt, label = "Attention kernel method")
+        plt.plot(np.arange(pas,pas*n,pas), ldtwt, label = "KNN with TW")
+        plt.legend(loc = 'best')
+        plt.xlabel("Number of data")
+        plt.ylabel("Percentage of wrong classifications")
+        plt.title("0-1 Loss in percentage for Classification")
+        plt.show()
 
     ft = time() - st
     print("Fin en {} min et {} sec".format(ft // 60, ft % 60))
 
-    if rep == 1:
+    if show:
         # Partie ou on dessine en 2d les Hidden
         elems = separate(TSNE(n_components = 2).fit_transform(hiddens_train), ytr, 3)
         plt.figure()
@@ -174,20 +166,20 @@ def main(n,pas,xtr,xte,ytr,yte,rep = 1, show=True):
         plt.legend(loc = 'best')
         plt.show()
         #Partie ou on regarde les résultats a la fin
-        plt.figure()
+        '''plt.figure()
         plt.plot(range(n-1),l,label = "Attention kernel method")
-        plt.plot(range(n-1),ldtw-0.05, label = "KNN with TW")
+        plt.plot(range(n-1),ldtw, label = "KNN with TW")
         plt.legend(loc = 'best')
         plt.xlabel("Number of data")
         plt.ylabel("Percentage of wrong classifications")
         plt.title("0-1 Loss in percentage for Classification")
-        plt.show()
+        plt.show()'''
 
     return(lt[-1],model)
 
 
 xsp,ysp = shuffle_in_unison(xsp,ysp)
-ret = main(60,5,xsp,X_test,ysp,y_test,20)
+ret = main(60,5,xsp,X_test,ysp,y_test,1, True)
 
 
 def swigitty(lng):
@@ -213,6 +205,10 @@ def swigitty(lng):
 
 
 '''
-Done all    
+Retester sur la base de données sans rien changer.
+DTW ? seems to not be working properly
+Finir la fonction Swigitty
+
+Rajouter des commentaires, éventuellement ...
 
 '''
