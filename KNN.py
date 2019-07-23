@@ -3,7 +3,7 @@ import scipy.spatial as sp
 import tslearn.metrics as tsmetrics
 import seaborn as sns
 import tslearn.neighbors as tsn
-
+from sklearn.neighbors import KNeighborsClassifier
 
 def distance(a,b):
     return tsmetrics.dtw(a,b)
@@ -100,12 +100,11 @@ def FSL(tab,csum,lb,true_lb,shape, prnt = False):
 
 
 def testknn(xtr,ytr,xte,yte,shap,prnt = False):
-    print(xtr.shape, ytr.shape, xte.shape , yte.shape)
     #tot = np.zeros(shap)
     #tr = np.zeros(shap)
-    clf = tsn.KNeighborsTimeSeriesClassifier(n_neighbors = 1, metric = metric)
+    clf = KNeighborsClassifier(n_neighbors = 1)
     res = clf.fit(xtr,ytr).predict(xte)
-    loss = np.sum(np.abs(res-yte))
+    loss = np.sum((res!=yte))
     #if prnt : print("DTW-KNN: \n",tot,tr)
     return(loss/testsize)
 
@@ -129,12 +128,10 @@ def main(n,pas,xtr,xte,ytr,yte,rep = 1, show=True):
     lt = np.zeros(n - 1)
     ldtwt = np.zeros(n - 1)
 
+    xtr = xtr[:,:,0]
+    xte = xte[:,:,0]
 
-    xtrshape = xtr.shape
-    xtr = np.reshape(xtr, (xtrshape[0], xtrshape[1]))
 
-    xteshape = xte.shape
-    xte = np.reshape(xte, (xteshape[0], xtrshape[1]))
 
     print(xte.shape,xtr.shape,yte.shape,ytr.shape)
     with torch.no_grad():
@@ -145,10 +142,9 @@ def main(n,pas,xtr,xte,ytr,yte,rep = 1, show=True):
         #On reprend la partie Normale:
         for _ in range(rep):
 
-
             hiddens_train, ytr,shuff = shuffle_in_unison(hiddens_train,ytr,True)
             tabc = shuffleaccord(tabc,shuff,1)
-
+            xtr  = shuffleaccord(xtr,shuff,0)
             csum = np.cumsum(tabc, axis = 1)
             #print(tabc.shape, tab.shape, l)
             for j in range(1,n):
@@ -169,6 +165,7 @@ def main(n,pas,xtr,xte,ytr,yte,rep = 1, show=True):
             plt.xlabel("Number of data")
             plt.ylabel("Percentage of wrong classifications")
             plt.title("0-1 Loss in percentage for Classification")
+            plt.set_ylim(0, 1)
             plt.show()
 
         lt /= (rep)
@@ -194,6 +191,7 @@ def main(n,pas,xtr,xte,ytr,yte,rep = 1, show=True):
         plt.legend(loc = 'best')
         plt.xlabel("Number of data")
         plt.ylabel("Percentage of wrong classifications")
+        plt.set_ylim(0, 1)
         plt.title("0-1 Loss in percentage for Classification")
         plt.show()
 
@@ -221,7 +219,7 @@ def swigitty(lng,pas):
         #classacc[j] = res
         errtab[j-1] += model.test_tab(data_e)
 
-    #sns.set(style = "darkgrid")
+    sns.set(style = "darkgrid")
     #sns.boxplot(np.arange(pas,lng*pas,pas),errtab)
     return(errtab)
     "FAUT QUE JE TROUVE COMMENT plot CECI"
@@ -230,7 +228,7 @@ def swigitty(lng,pas):
 xsp,ysp = shuffle_in_unison(xsp,ysp)
 
 
-ret = main(31,10,xsp,X_test,ysp,y_test,10, True)
+ret = main(50,10,xsp,X_test,ysp,y_test,1, True)
 #res = swigitty(10,10)
 
 
