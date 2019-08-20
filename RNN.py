@@ -242,7 +242,7 @@ class RNNClass(torch.nn.Module):
         res = self.maxi(res2)
         return res
 
-    def fit(self, data, epochs, optimizer):
+    def fit(self, data, epochs, optimizer, prnt = False ):
         time0 = time()
         for e in range(epochs):
             running_loss = 0
@@ -262,11 +262,11 @@ class RNNClass(torch.nn.Module):
                 optimizer.step()
 
                 running_loss += loss.item()
-            if e % 5 == 0: print("Epoch {} - Training loss: {}".format(e, running_loss / len(data)))
+            if e % 5 == 0 and prnt: print("Epoch {} - Training loss: {}".format(e, running_loss / len(data)))
         timet = time() - time0
         print("Fin de l'étape d'apprentissage en {} min et {} sec".format(timet // 60, timet % 60))
 
-    def test_acc(self, data, perc):
+    def test_acc(self, data, perc, prnt = False):
         guesses = np.zeros(5)
         total_labels = np.zeros(5)
         loss, all_count = 0, 0
@@ -283,14 +283,16 @@ class RNNClass(torch.nn.Module):
                 total_labels[true_label] += 1
 
                 #if true_label == pred_label : print(true_label)
-                loss += true_label == pred_label
+                loss += true_label != pred_label
 
                 all_count += 1
-        print("Number Of Images Tested =", all_count)
-        print("Model Accuracy =", (loss / all_count).item())
-        print("Guesses overall : ", guesses)
-        print("Actual numbers :", total_labels)
+        if prnt :
+            print("Number Of Images Tested =", all_count)
+            print("Model Accuracy =", 1 - (loss / all_count).item())
+            print("Guesses overall : ", guesses)
+            print("Actual numbers :", total_labels)
 
+        return (loss / all_count).item()
 
 
 ################################# RNNDBPred #################################
@@ -344,7 +346,7 @@ class RNNdoubleheadPred(torch.nn.Module):
             return res
 
 
-    def fit(self, data, epochs, opti):
+    def fit(self, data, epochs, opti, prnt = False):
         time0 = time()
         i = 0
         for e in range(epochs):
@@ -389,11 +391,11 @@ class RNNdoubleheadPred(torch.nn.Module):
                     running_loss += loss.item()
 
 
-            if e % 5 == 0: print("Epoch {} - Training loss: {}".format(e, running_loss / len(data)))
+            if e % 5 == 0 and prnt: print("Epoch {} - Training loss: {}".format(e, running_loss / len(data)))
         timet = time() - time0
         print("Fin de l'étape d'apprentissage en {} min et {} sec".format(timet // 60, timet % 60))
 
-    def test_acc(self, data, perc):
+    def test_acc(self, data, perc ,prnt = False):
         guesses = np.zeros(5)
         total_labels = np.zeros(5)
         loss, all_count = 0, 0
@@ -410,14 +412,14 @@ class RNNdoubleheadPred(torch.nn.Module):
                 total_labels[true_label] += 1
 
                 #if true_label == pred_label : print(true_label)
-                loss += true_label == pred_label
+                loss += true_label != pred_label
 
                 all_count += 1
-        print("Number Of Images Tested =", all_count)
-        print("Model Accuracy =", (loss / all_count).item())
-        print("Guesses overall : ", guesses)
-        print("Actual numbers :", total_labels)
-
+        if prnt:
+            print("Number Of Images Tested =", all_count)
+            print("Model Accuracy =", 1 - (loss / all_count).item())
+            print("Guesses overall : ", guesses)
+            print("Actual numbers :", total_labels)
 
 
 
@@ -469,7 +471,7 @@ class RNNdoubleheadClass(torch.nn.Module):
             res3 = self.linear3(res2)
             return res3
 
-    def fit(self, data, epochs, opti):
+    def fit(self, data, epochs, opti, prnt = False):
         time0 = time()
         i = 0
         for e in range(epochs):
@@ -511,17 +513,17 @@ class RNNdoubleheadClass(torch.nn.Module):
                     running_loss += loss.item()
                 i+= 1
 
-            if e % 5 == 0: print("Epoch {} - Training loss: {}".format(e, running_loss / len(data)))
+            if e % 5 == 0 and prnt: print("Epoch {} - Training loss: {}".format(e, running_loss / len(data)))
         timet = time() - time0
         print("Fin de l'étape d'apprentissage en {} min et {} sec".format(timet // 60, timet % 60))
 
-    def test_acc(self, data, perc):
+    def test_acc(self, data, perc, prnt = False):
         guesses = np.zeros(5)
         total_labels = np.zeros(5)
         loss, all_count = 0, 0
         for entries, labels in data:
             for i in range(len(labels)):
-                entry = entries[i].reshape(1,1,self.ins).float()
+                entry = entries[i].reshape(1, 1, self.ins).float()
                 with torch.no_grad():
                     aux = self.forward(entry)
 
@@ -531,16 +533,17 @@ class RNNdoubleheadClass(torch.nn.Module):
                 guesses[pred_label] += 1
                 total_labels[true_label] += 1
 
-                #if true_label == pred_label : print(true_label)
+                # if true_label == pred_label : print(true_label)
                 loss += true_label == pred_label
 
                 all_count += 1
-        print("Number Of Images Tested =", all_count)
-        print("Model Accuracy =", (loss / all_count).item())
-        print("Guesses overall : ", guesses)
-        print("Actual numbers :", total_labels)
+        if prnt:
+            print("Number Of Images Tested =", all_count)
+            print("Model Accuracy =", (loss / all_count).item())
+            print("Guesses overall : ", guesses)
+            print("Actual numbers :", total_labels)
 
-
+        return (loss / all_count).item()
 
 
 
@@ -643,7 +646,7 @@ au1 = X_test[:,end:end + length,:]
 au2 = (y_test-1).reshape(y_test.shape[0],1,1)
 au = np.append(au1,au2,axis=1)
 
-data_te = Dataset(X_test[:,start:end,:],au)
+data_te = Dataset(X_test[:,start:end,:],y_test-1)
 data_e_db = torch.utils.data.DataLoader(data_te, batch_size = 24, shuffle = False)
 
 
@@ -668,7 +671,7 @@ hdim = 1
 
 # On regarde le résultat du modèle avant de l'entrainer
 def test(model,data):
-    model.test_acc(data,0.1)
+    return model.test_acc(data,0.1)
 
 def train(epochs,model,optimizer,criterion):
     model.fit(data_r, epochs, optimizer, criterion)
@@ -724,17 +727,17 @@ def code():
     #ts_test(model)
     return model
 
-def codeclass():
+def codeclass(ft = False):
     model = RNNClass(140, hidden_sizes, 5)
     optimizer = optim.SGD(model.parameters(), lr = 0.03)
-    model.fit(data_r_class, 50, optimizer)
-    test(model,data_e_class)
+    if ft : model.fit(data_r_class, 50, optimizer)
+    #test(model,data_e_class)
     return model
 
-def codedbheadclass():
+def codedbheadclass(ft= False):
     model = RNNdoubleheadClass(input_size, hidden_sizes, output_size, 10)
     optimizer = optim.SGD(model.parameters(), lr = 0.03)
-    model.fit(data_r_db, 50, optimizer)
+    if ft : model.fit(data_r_db, 50, optimizer)
     return model
 
 def codedbheadpred():
@@ -749,12 +752,6 @@ def codedbheadpred():
 '''
 --> Réseau double sortie
 
-RNN MLP classif
-RNN regresson seule (déja fait)
-
-2 tetes classfi
-2 tetes attention
-comparer les différentes méthodes.
 -----------------------------------------------------
 
 OLD COMMENTS :
